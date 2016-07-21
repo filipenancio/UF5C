@@ -1,0 +1,37 @@
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Variáveis:%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+
+var a: integer;
+var b: integer;
+var Cazaquistao: real;
+var Tajiquistao: real;
+var Turquemenistao: real;
+var MotherRussia: integer;
+var Socialismo: boolean;
+var CAPITALISM: boolean;
+a := 3;
+b := 4;
+Cazaquistao := 6.0;
+Tajiquistao := 5.0;
+Turquemenistao := 7.0;
+MotherRussia := 120;
+Socialismo := TRUE;
+CAPITALISM := FALSE;
+a + b;
+a > b;
+b > a;
+a + 2;
+4 + b;
+a > 5;
+b >= 4;
+Cazaquistao >= 6.0;
+Cazaquistao <= 5.0;
+Cazaquistao > Tajiquistao;
+Tajiquistao = Cazaquistao;
+Cazaquistao > Tajiquistao < Turquemenistao > 10;
+MotherRussia > (Cazaquistao OR Tajiquistao OR Turquemenistao);
+Socialismo = MotherRussia;
+CAPITALISM <> MotherRussia;
+Socialismo = TRUE AND CAPITALISM = FALSE;
+

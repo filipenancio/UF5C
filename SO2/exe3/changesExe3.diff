@@ -1,0 +1,638 @@
+diff --git a/./EPOS_INIT/ine5424/include/synchronizer.h b/./SO2/exe3/EPOS/include/synchronizer.h
+index 326a39f..4b5799f 100644
+--- a/./EPOS_INIT/ine5424/include/synchronizer.h
++++ b/./SO2/exe3/EPOS/include/synchronizer.h
+@@ -12,6 +12,7 @@ class Synchronizer_Common
+ {
+ protected:
+     Synchronizer_Common() {}
++    ~Synchronizer_Common() { wakeup_all(); }
+ 
+     // Atomic operations
+     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
+@@ -22,12 +23,54 @@ protected:
+     void begin_atomic() { Thread::lock(); }
+     void end_atomic() { Thread::unlock(); }
+ 
+-    void sleep() { Thread::yield(); } // implicit unlock()
+-    void wakeup() { end_atomic(); }
+-    void wakeup_all() { end_atomic(); }
++    void sleep() {
++        Thread* previous = Thread::running();
++        previous->_state = Thread::WAITING;
++        queue.insert(&previous->_link);
++
++        // if(!Thread::_ready.empty()) {
++        Thread::_running = previous->nextThread();
++        Thread::_running->_state = Thread::RUNNING;
++        Thread::dispatch(previous, Thread::_running);
++        // } else {
++        // Thread::idle();
++        // }
++
++        end_atomic();
++    }
++    void wakeup() {
++        if(!queue.empty()) {
++            wakeupThread();
++        }
++
++        end_atomic();
++
++        if(Thread::preemptive)
++            Thread::reschedule();
++    }
++    void wakeup_all() {
++        begin_atomic();
++
++        while(!queue.empty()) {
++            wakeupThread();
++        }
++
++        end_atomic();
++
++        if(Thread::preemptive)
++            Thread::reschedule();
++    }
++
++    void wakeupThread(){
++        Thread* syncThread = queue.remove()->object();
++        syncThread->_state = Thread::READY;
++        Thread::notifyNewReady(syncThread);
++    }
++
++private:
++    Thread::Queue queue;
+ };
+ 
+ __END_SYS
+ 
+ #endif
+-
+diff --git a/./EPOS_INIT/ine5424/include/thread.h b/./SO2/exe3/EPOS/include/thread.h
+index 28888ae..67596ff 100644
+--- a/./EPOS_INIT/ine5424/include/thread.h
++++ b/./SO2/exe3/EPOS/include/thread.h
+@@ -45,13 +45,16 @@ public:
+     enum {
+         HIGH = 0,
+         NORMAL = 15,
+-        LOW = 31
++        LOW = 31,
++        IDLE = 63
+     };
+ 
+     // Thread Configuration
+     struct Configuration {
+         Configuration(const State & s = READY, const Priority & p = NORMAL, unsigned int ss = STACK_SIZE)
+-        : state(s), priority(p), stack_size(ss) {}
++        : state(s), priority(p), stack_size(ss) {
++          assert(p <= IDLE);
++        }
+ 
+         State state;
+         Priority priority;
+@@ -69,6 +72,7 @@ public:
+     ~Thread();
+ 
+     const volatile State & state() const { return _state; }
++    static Thread * volatile nextThread() { return _ready.remove()->object(); }
+ 
+     const volatile Priority & priority() const { return _link.rank(); }
+     void priority(const Priority & p);
+@@ -77,8 +81,10 @@ public:
+     void pass();
+     void suspend();
+     void resume();
++    static void notifyNewReady(Thread * tReady);
+ 
+     static Thread * volatile self() { return running(); }
++
+     static void yield();
+     static void exit(int status = 0);
+ 
+@@ -86,6 +92,7 @@ protected:
+     void constructor_prolog(unsigned int stack_size);
+     void constructor_epilog(const Log_Addr & entry, unsigned int stack_size);
+ 
++    void wakeup_joiners();
+     static Thread * volatile running() { return _running; }
+ 
+     static void lock() { CPU::int_disable(); }
+@@ -101,6 +108,7 @@ protected:
+ 
+ private:
+     static void init();
++    static void init_idle();
+ 
+ protected:
+     char * _stack;
+@@ -108,12 +116,16 @@ protected:
+     volatile State _state;
+     Queue::Element _link;
+ 
++    Queue _joining;
++    Thread * _joined;
++
+     static Scheduler_Timer * _timer;
+ 
+ private:
+     static Thread * volatile _running;
+     static Queue _ready;
+     static Queue _suspended;
++    static unsigned int _threadCount;
+ };
+ 
+ 
+diff --git a/./EPOS_INIT/ine5424/src/abstraction/mutex.cc b/./SO2/exe3/EPOS/src/abstraction/mutex.cc
+index 7345f5c..2b8fdb0 100644
+--- a/./EPOS_INIT/ine5424/src/abstraction/mutex.cc
++++ b/./SO2/exe3/EPOS/src/abstraction/mutex.cc
+@@ -22,8 +22,7 @@ void Mutex::lock()
+ 
+     begin_atomic();
+     if(tsl(_locked))
+-        while(tsl(_locked))
+-            sleep(); // implicit end_atomic()
++        sleep(); // implicit end_atomic()
+     else
+         end_atomic();
+ }
+diff --git a/./EPOS_INIT/ine5424/src/abstraction/semaphore.cc b/./SO2/exe3/EPOS/src/abstraction/semaphore.cc
+index a2e8f7a..029df86 100644
+--- a/./EPOS_INIT/ine5424/src/abstraction/semaphore.cc
++++ b/./SO2/exe3/EPOS/src/abstraction/semaphore.cc
+@@ -20,9 +20,11 @@ void Semaphore::p()
+ {
+     db<Synchronizer>(TRC) << "Semaphore::p(this=" << this << ",value=" << _value << ")" << endl;
+ 
+-    fdec(_value);
+-    while(_value < 0)
++    begin_atomic();
++    if(fdec(_value) < 1)
+         sleep();
++    else
++        end_atomic();
+ }
+ 
+ 
+@@ -30,9 +32,11 @@ void Semaphore::v()
+ {
+     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
+ 
+-    finc(_value);
+-    if(_value < 1)
++    begin_atomic();
++    if(finc(_value) < 0)
+         wakeup();
++    else
++        end_atomic();
+ }
+ 
+ __END_SYS
+diff --git a/./EPOS_INIT/ine5424/src/abstraction/semaphore_test.cc b/./SO2/exe3/EPOS/src/abstraction/semaphore_test.cc
+index e4033f4..f56e22c 100644
+--- a/./EPOS_INIT/ine5424/src/abstraction/semaphore_test.cc
++++ b/./SO2/exe3/EPOS/src/abstraction/semaphore_test.cc
+@@ -11,7 +11,8 @@ using namespace EPOS;
+ 
+ const int iterations = 10;
+ 
+-Mutex table;
++// Mutex table;
++Semaphore table;
+ 
+ Thread * phil[5];
+ Semaphore * chopstick[5];
+@@ -25,20 +26,24 @@ int philosopher(int n, int l, int c)
+ 
+     for(int i = iterations; i > 0; i--) {
+ 
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(l, c);
+         cout << "thinking";
+-        table.unlock();
++        // table.unlock();
++        table.v();
+ 
+         Delay thinking(2000000);
+ 
+         chopstick[first]->p();   // get first chopstick
+         chopstick[second]->p();   // get second chopstick
+ 
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(l, c);
+         cout << " eating ";
+-        table.unlock();
++        // table.unlock();
++        table.v();
+ 
+         Delay eating(1000000);
+ 
+@@ -46,17 +51,20 @@ int philosopher(int n, int l, int c)
+         chopstick[second]->v();   // release second chopstick
+     }
+ 
+-    table.lock();
++    // table.lock();
++    table.p();
+     Display::position(l, c);
+     cout << "  done  ";
+-    table.unlock();
++    // table.unlock();
++    table.v();
+ 
+     return iterations;
+ }
+ 
+ int main()
+ {
+-    table.lock();
++    // table.lock();
++    table.p();
+     Display::clear();
+     Display::position(0, 0);
+     cout << "The Philosopher's Dinner:" << endl;
+@@ -66,8 +74,11 @@ int main()
+ 
+     phil[0] = new Thread(&philosopher, 0,  5, 32);
+     phil[1] = new Thread(&philosopher, 1, 10, 44);
++    Delay creating2(1000000);
+     phil[2] = new Thread(&philosopher, 2, 16, 39);
++    Delay creating3(1000000);
+     phil[3] = new Thread(&philosopher, 3, 16, 24);
++    Delay creating4(1000000);
+     phil[4] = new Thread(&philosopher, 4, 10, 20);
+ 
+     cout << "Philosophers are alive and hungry!" << endl;
+@@ -85,14 +96,18 @@ int main()
+     Display::position(19, 0);
+ 
+     cout << "The dinner is served ..." << endl;
+-    table.unlock();
++    // table.unlock();
++    table.v();
+ 
+     for(int i = 0; i < 5; i++) {
++        Delay init(1000000);
+         int ret = phil[i]->join();
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(20 + i, 0);
+         cout << "Philosopher " << i << " ate " << ret << " times " << endl;
+-        table.unlock();
++        // table.unlock();
++        table.v();
+     }
+ 
+     for(int i = 0; i < 5; i++)
+diff --git a/./EPOS_INIT/ine5424/src/abstraction/thread.cc b/./SO2/exe3/EPOS/src/abstraction/thread.cc
+index a398d0b..64afc0c 100644
+--- a/./EPOS_INIT/ine5424/src/abstraction/thread.cc
++++ b/./SO2/exe3/EPOS/src/abstraction/thread.cc
+@@ -3,6 +3,11 @@
+ #include <system/kmalloc.h>
+ #include <machine.h>
+ #include <thread.h>
++#include <display.h>
++#include <utility/ostream.h>
++
++using namespace EPOS;
++OStream cout2;
+ 
+ // This_Thread class attributes
+ __BEGIN_UTIL
+@@ -17,6 +22,7 @@ Scheduler_Timer * Thread::_timer;
+ Thread* volatile Thread::_running;
+ Thread::Queue Thread::_ready;
+ Thread::Queue Thread::_suspended;
++unsigned int Thread::_threadCount = 0;
+ 
+ // Methods
+ void Thread::constructor_prolog(unsigned int stack_size)
+@@ -29,9 +35,12 @@ void Thread::constructor_prolog(unsigned int stack_size)
+ 
+ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
+ {
++    _threadCount++;
++
+     db<Thread>(TRC) << "Thread(entry=" << entry
+                     << ",state=" << _state
+                     << ",priority=" << _link.rank()
++                    << ",threadCount=" << _threadCount
+                     << ",stack={b=" << reinterpret_cast<void *>(_stack)
+                     << ",s=" << stack_size
+                     << "},context={b=" << _context
+@@ -54,29 +63,61 @@ Thread::~Thread()
+     db<Thread>(TRC) << "~Thread(this=" << this
+                     << ",state=" << _state
+                     << ",priority=" << _link.rank()
++                    << ",threadCount=" << _threadCount
+                     << ",stack={b=" << reinterpret_cast<void *>(_stack)
+                     << ",context={b=" << _context
+                     << "," << *_context << "})" << endl;
+ 
++    // Confirma que ninguém está esperando está thread
++    assert(_joining.empty());
++    // Se a thread deletada está esperando outra terminar, é removida da lista de joining da outra thread
++    if (_joined)
++        _joined->_joining.remove(&_link);
++
+     _ready.remove(this);
+     _suspended.remove(this);
+ 
++    if(_state != FINISHING){
++      _threadCount--;
++    }
++
+     unlock();
+ 
+     kfree(_stack);
+ }
+ 
+-
+ int Thread::join()
+ {
+     lock();
+ 
+     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
+ 
+-    while(_state != FINISHING)
+-        yield(); // implicit unlock()
++    // Display::position(20,0);
++    // int count = 1;
++    // while(_state != FINISHING){
++        // Display::position(20+count,0);
++        // cout2<<"Rodou:"<<count;
++        // count++;
++        //yield(); // implicit unlock()
+ 
+-    unlock();
++    //Evitar que thread possa dar join em si mesma
++    assert(this != _running);
++
++    //Evitar que duas threads façam chamadas cíclicas
++    assert(this->joined != _running);
++
++    if(_state != FINISHING){
++        _running->_joined = this;
++
++        Thread* previous = _running;
++        previous->_state = WAITING;
++        _joining.insert(&previous->_link);
++
++        _running = previous->nextThread();
++        _running->_state = RUNNING;
++        Thread::dispatch(previous, _running);
++    }else
++        unlock();
+ 
+     return *reinterpret_cast<int *>(_stack);
+ }
+@@ -114,13 +155,15 @@ void Thread::suspend()
+     _state = SUSPENDED;
+     _suspended.insert(&_link);
+ 
+-    if((_running == this) && !_ready.empty()) {
++    if(_running == this) {
++       //&& !_ready.empty()
++
+         _running = _ready.remove()->object();
+         _running->_state = RUNNING;
+ 
+         dispatch(this, _running);
+-    } else
+-        idle(); // implicit unlock()
++    } //else
++        //idle(); // implicit unlock()
+ 
+     unlock();
+ }
+@@ -139,6 +182,22 @@ void Thread::resume()
+    unlock();
+ }
+ 
++void Thread::notifyNewReady(Thread * tReady)
++{
++    lock();
++
++    db<Thread>(TRC) << "Thread::notifyNewReady(tready = " << tReady << ")" << endl;
++
++    tReady->_state = READY;
++    _ready.insert(&tReady->_link);
++
++    if(preemptive){
++        reschedule();
++    }
++
++    unlock();
++}
++
+ 
+ // Class methods
+ void Thread::yield()
+@@ -147,17 +206,33 @@ void Thread::yield()
+ 
+     db<Thread>(TRC) << "Thread::yield(running=" << _running << ")" << endl;
+ 
+-    if(!_ready.empty()) {
+-        Thread * prev = _running;
+-        prev->_state = READY;
+-        _ready.insert(&prev->_link);
++    //if(!_ready.empty()) {
++    Thread * prev = _running;
++    prev->_state = READY;
++    _ready.insert(&prev->_link);
++
++    _running = _ready.remove()->object();
++    _running->_state = RUNNING;
+ 
+-        _running = _ready.remove()->object();
+-        _running->_state = RUNNING;
++    dispatch(prev, _running);
++    //} else
++    //    idle();
++
++    unlock();
++}
+ 
+-        dispatch(prev, _running);
+-    } else
+-        idle();
++void Thread::wakeup_joiners()
++{
++    lock();
++
++    db<Thread>(TRC) << "Thread::wakeup_joiners(this=" << this << ")" << endl;
++
++    Thread * joiner;
++
++    while(!_joining.empty()) {
++        joiner = _joining.remove()->object();
++        notifyNewReady(joiner); // implicit unlock()
++    }
+ 
+     unlock();
+ }
+@@ -169,30 +244,36 @@ void Thread::exit(int status)
+ 
+     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
+ 
+-    while(_ready.empty() && !_suspended.empty())
+-        idle(); // implicit unlock();
++    *reinterpret_cast<int *>(_running->_stack) = status;
++    _running->wakeup_joiners(); // implicit unlock();
+ 
+     lock();
+ 
+-    if(!_ready.empty()) {
+-        Thread * prev = _running;
+-        prev->_state = FINISHING;
+-        *reinterpret_cast<int *>(prev->_stack) = status;
++    //while(_ready.empty() && !_suspended.empty())
++    //    idle(); // implicit unlock();
+ 
+-        _running = _ready.remove()->object();
+-        _running->_state = RUNNING;
++    //lock();
+ 
+-        dispatch(prev, _running);
+-    } else {
+-        db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
+-        if(reboot) {
+-            db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+-            Machine::reboot();
+-        } else {
+-            db<Thread>(WRN) << "Halting the CPU ..." << endl;
+-            CPU::halt();
+-        }
+-    }
++    //if(!_ready.empty()) {
++    Thread * prev = _running;
++    prev->_state = FINISHING;
++    // *reinterpret_cast<int *>(_running->_stack) = status;
++    _threadCount--;
++
++    _running = _ready.remove()->object();
++    _running->_state = RUNNING;
++
++    dispatch(prev, _running);
++    //} else {
++    //    db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
++    //    if(reboot) {
++    //        db<Thread>(WRN) << "Rebooting the machine ..." << endl;
++    //        Machine::reboot();
++    //    } else {
++    //        db<Thread>(WRN) << "Halting the CPU ..." << endl;
++    //        CPU::halt();
++    //    }
++    //}
+ 
+     unlock();
+ }
+@@ -232,11 +313,30 @@ int Thread::idle()
+ {
+     db<Thread>(TRC) << "Thread::idle()" << endl;
+ 
+-    db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
+-    db<Thread>(INF) << "Halting the CPU ..." << endl;
++    //db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
++    //db<Thread>(INF) << "Halting the CPU ..." << endl;
++
++    //CPU::int_enable();
++    //CPU::halt();
+ 
+-    CPU::int_enable();
+-    CPU::halt();
++    while(_threadCount > 1) {
++        db<Thread>(TRC) << "Thread::idle(thread_count=" << _threadCount << ")" << endl;
++
++        db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
++        db<Thread>(INF) << "Halting the CPU ..." << endl;
++
++        CPU::int_enable();
++        CPU::halt();
++    }
++
++    db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
++    if(reboot) {
++        db<Thread>(WRN) << "Rebooting the machine ..." << endl;
++        Machine::reboot();
++    } else {
++        db<Thread>(WRN) << "Halting the CPU ..." << endl;
++        CPU::halt();
++    }
+ 
+     return 0;
+ }
+diff --git a/./EPOS_INIT/ine5424/src/abstraction/thread_init.cc b/./SO2/exe3/EPOS/src/abstraction/thread_init.cc
+index 8a0fb90..2d35342 100644
+--- a/./EPOS_INIT/ine5424/src/abstraction/thread_init.cc
++++ b/./SO2/exe3/EPOS/src/abstraction/thread_init.cc
+@@ -15,8 +15,16 @@ void Thread::init()
+     // Letting reschedule() happen during thread creation is harmless, since
+     // MAIN is created first and dispatch won't replace it nor by itself
+     // neither by IDLE (which has a lower priority)
+-    if(preemptive)
++    if(preemptive) {
+         _timer = new (kmalloc(sizeof(Scheduler_Timer))) Scheduler_Timer(QUANTUM, time_slicer);
++        _timer->disable();
++    }
++}
++
++void Thread::init_idle()
++{
++    db<Init, Thread>(TRC) << "Thread::init_idle()" << endl;
++    new (kmalloc(sizeof(Thread))) Thread(Configuration(READY, IDLE), idle);
+ }
+ 
+ __END_SYS
+diff --git a/./EPOS_INIT/ine5424/src/init/init_first.cc b/./SO2/exe3/EPOS/src/init/init_first.cc
+index 88db245..7b74051 100644
+--- a/./EPOS_INIT/ine5424/src/init/init_first.cc
++++ b/./SO2/exe3/EPOS/src/init/init_first.cc
+@@ -24,26 +24,35 @@ public:
+         }
+ 
+         db<Init>(INF) << "Initializing the first thread: " << endl;
+-
+         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
+         // which will directly call main(). In this case, _init will have already been called,
+         // before Init_Application, to construct main()'s global objects.
+         Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::NORMAL), reinterpret_cast<int (*)()>(__epos_app_entry));
++        db<Init>(INF) << "done!" << endl;
++
+ 
++        // Exe3: fix idle thread
++        // Neste ponto foi criada uma thread idle, utilizada para tratar os momentos
++        // em que o SO espera por threads na fila de pronto e/ou não tenha outras threads para rodar
++        db<Init>(INF) << "Initializing the idle thread: " << endl;
++        Thread::init_idle();
+         db<Init>(INF) << "done!" << endl;
+ 
+         db<Init>(INF) << "INIT ends here!" << endl;
+ 
+-        db<Init, Thread>(INF) << "Dispatching the first thread: " << Thread::running() << endl;
+-
+         This_Thread::not_booting();
+ 
++        //Religando timer
++        if(Thread::preemptive){
++          Thread::_timer->enable();
++        }
++
+         Thread::running()->_context->load();
+     }
+ };
+ 
+ // Global object "init_first" must be constructed last in the context of the
+-// OS, for it activates the first application thread (usually main()) 
++// OS, for it activates the first application thread (usually main())
+ Init_First init_first;
+ 
+ __END_SYS

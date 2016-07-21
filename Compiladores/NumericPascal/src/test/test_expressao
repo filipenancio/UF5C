@@ -1,0 +1,15 @@
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Expressões aritméticas:%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+
+3+3; {Resultado: 6}
+3-3; {Resultado: 0}
+3/3; {Resultado: 1}
+10.0 + 0.57 -2.0; {Resultado: 8.57}
+-2 * (3 / 5); {Resultado: -1.2}
+2 > 4; {Resultado: 0 (Equivalente a FALSE)}
+2 < 4; {Resultado: 1 (Equivalente a TRUE)}
+-2+-8; {Resultado: -10}
+--2; {Resutadlo: 2}
+((2+3)+(5-6))/2; {Resultado: 2}
+7*0.4 + 5*0.6; {Resultado: 5.8; Acusará incompatibilidade de tipos}

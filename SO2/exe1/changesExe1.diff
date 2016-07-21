@@ -1,0 +1,241 @@
+diff --git a/./.git/HEAD b/./.git/HEAD
+deleted file mode 100644
+index cb089cd..0000000
+--- a/./.git/HEAD
++++ /dev/null
+@@ -1 +0,0 @@
+-ref: refs/heads/master
+diff --git a/./.git/config b/./.git/config
+deleted file mode 100644
+index d0fcf98..0000000
+--- a/./.git/config
++++ /dev/null
+@@ -1,8 +0,0 @@
+-[core]
+-	repositoryformatversion = 0
+-	filemode = true
+-	bare = false
+-	logallrefupdates = true
+-[svn-remote "svn"]
+-	url = https://epos.lisha.ufsc.br/svn/teaching/ine5424
+-	fetch = :refs/remotes/git-svn
+
+diff --git a/./include/synchronizer.h b/../../SO2/exe1/EPOS/include/synchronizer.h
+index 326a39f..ed19a2f 100644
+--- a/./include/synchronizer.h
++++ b/../../SO2/exe1/EPOS/include/synchronizer.h
+@@ -12,6 +12,7 @@ class Synchronizer_Common
+ {
+ protected:
+     Synchronizer_Common() {}
++    ~Synchronizer_Common() { wakeup_all(); }
+ 
+     // Atomic operations
+     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
+@@ -22,12 +23,54 @@ protected:
+     void begin_atomic() { Thread::lock(); }
+     void end_atomic() { Thread::unlock(); }
+ 
+-    void sleep() { Thread::yield(); } // implicit unlock()
+-    void wakeup() { end_atomic(); }
+-    void wakeup_all() { end_atomic(); }
++    void sleep() {
++        Thread* previous = Thread::running();
++        previous->_state = Thread::WAITING;
++        queue.insert(&previous->_link);
++
++        if(!Thread::_ready.empty()) {
++            Thread::_running = Thread::_ready.remove()->object();
++            Thread::_running->_state = Thread::RUNNING;
++            Thread::dispatch(previous, Thread::_running);
++        } else {
++            Thread::idle();
++        }
++
++        end_atomic();
++    }
++    void wakeup() {
++        if(!queue.empty()) {
++            wakeupThread();
++        }
++
++        end_atomic();
++
++        if(Thread::preemptive)
++            Thread::reschedule();
++    }
++    void wakeup_all() {
++        begin_atomic();
++
++        while(!queue.empty()) {
++            wakeupThread();
++        }
++
++        end_atomic();
++
++        if(Thread::preemptive)
++            Thread::reschedule();
++    }
++
++    void wakeupThread(){
++        Thread* syncThread = queue.remove()->object();
++        syncThread->_state = Thread::READY;
++        Thread::_ready.insert(&syncThread->_link);
++    }
++
++private:
++    Thread::Queue queue;
+ };
+ 
+ __END_SYS
+ 
+ #endif
+
+diff --git a/./include/thread.h b/../../SO2/exe1/EPOS/include/thread.h
+index 28888ae..e074c6d 100644
+--- a/./include/thread.h
++++ b/../../SO2/exe1/EPOS/include/thread.h
+@@ -90,7 +90,7 @@ protected:
+ 
+     static void lock() { CPU::int_disable(); }
+     static void unlock() { CPU::int_enable(); }
+-    static bool locked() { return CPU::int_disabled(); }
++    static bool locked() { return CPU::int_enabled(); }
+ 
+     static void reschedule();
+     static void time_slicer(const IC::Interrupt_Id & interrupt);
+
+diff --git a/./src/abstraction/semaphore.cc b/../../SO2/exe1/EPOS/src/abstraction/semaphore.cc
+index a2e8f7a..029df86 100644
+--- a/./src/abstraction/semaphore.cc
++++ b/../../SO2/exe1/EPOS/src/abstraction/semaphore.cc
+@@ -20,9 +20,11 @@ void Semaphore::p()
+ {
+     db<Synchronizer>(TRC) << "Semaphore::p(this=" << this << ",value=" << _value << ")" << endl;
+ 
+-    fdec(_value);
+-    while(_value < 0)
++    begin_atomic();
++    if(fdec(_value) < 1)
+         sleep();
++    else
++        end_atomic();
+ }
+ 
+ 
+@@ -30,9 +32,11 @@ void Semaphore::v()
+ {
+     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
+ 
+-    finc(_value);
+-    if(_value < 1)
++    begin_atomic();
++    if(finc(_value) < 0)
+         wakeup();
++    else
++        end_atomic();
+ }
+ 
+ __END_SYS
+
+diff --git a/./src/abstraction/semaphore_test.cc b/../../SO2/exe1/EPOS/src/abstraction/semaphore_test.cc
+index e4033f4..f56e22c 100644
+--- a/./src/abstraction/semaphore_test.cc
++++ b/../../SO2/exe1/EPOS/src/abstraction/semaphore_test.cc
+@@ -11,7 +11,8 @@ using namespace EPOS;
+ 
+ const int iterations = 10;
+ 
+-Mutex table;
++// Mutex table;
++Semaphore table;
+ 
+ Thread * phil[5];
+ Semaphore * chopstick[5];
+@@ -25,20 +26,24 @@ int philosopher(int n, int l, int c)
+ 
+     for(int i = iterations; i > 0; i--) {
+ 
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(l, c);
+         cout << "thinking";
+-        table.unlock();
++        // table.unlock();
++        table.v();
+ 
+         Delay thinking(2000000);
+ 
+         chopstick[first]->p();   // get first chopstick
+         chopstick[second]->p();   // get second chopstick
+ 
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(l, c);
+         cout << " eating ";
+-        table.unlock();
++        // table.unlock();
++        table.v();
+ 
+         Delay eating(1000000);
+ 
+@@ -46,17 +51,20 @@ int philosopher(int n, int l, int c)
+         chopstick[second]->v();   // release second chopstick
+     }
+ 
+-    table.lock();
++    // table.lock();
++    table.p();
+     Display::position(l, c);
+     cout << "  done  ";
+-    table.unlock();
++    // table.unlock();
++    table.v();
+ 
+     return iterations;
+ }
+ 
+ int main()
+ {
+-    table.lock();
++    // table.lock();
++    table.p();
+     Display::clear();
+     Display::position(0, 0);
+     cout << "The Philosopher's Dinner:" << endl;
+@@ -66,8 +74,11 @@ int main()
+ 
+     phil[0] = new Thread(&philosopher, 0,  5, 32);
+     phil[1] = new Thread(&philosopher, 1, 10, 44);
++    Delay creating2(1000000);
+     phil[2] = new Thread(&philosopher, 2, 16, 39);
++    Delay creating3(1000000);
+     phil[3] = new Thread(&philosopher, 3, 16, 24);
++    Delay creating4(1000000);
+     phil[4] = new Thread(&philosopher, 4, 10, 20);
+ 
+     cout << "Philosophers are alive and hungry!" << endl;
+@@ -85,14 +96,18 @@ int main()
+     Display::position(19, 0);
+ 
+     cout << "The dinner is served ..." << endl;
+-    table.unlock();
++    // table.unlock();
++    table.v();
+ 
+     for(int i = 0; i < 5; i++) {
++        Delay init(1000000);
+         int ret = phil[i]->join();
+-        table.lock();
++        // table.lock();
++        table.p();
+         Display::position(20 + i, 0);
+         cout << "Philosopher " << i << " ate " << ret << " times " << endl;
+-        table.unlock();
++        // table.unlock();
++        table.v();
+     }
+ 
+     for(int i = 0; i < 5; i++)

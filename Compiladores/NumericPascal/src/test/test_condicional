@@ -1,0 +1,142 @@
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Condicional:%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%}
+
+{------------------------------------------------------------------------------------------------------}
+{--------------------------------------- SEM ELSE -----------------------------------------------------}
+{------------------------------------------------------------------------------------------------------}
+
+{Exemplo com apenas uma instrução:}
+
+   var X: integer;   
+   var Y: integer;
+   X:=1;
+   Y:=2;
+     if X > Y then {Condição - SE X for maior que Y}
+     begin
+     {qualquer coisa}  
+     end;
+
+
+{Exemplo com mais de uma instrução:}
+
+   var A : integer;
+   var B : integer;
+   A:=1;
+   B:=2;        
+     if A = B then {Condição - SE A for igual a B}
+     begin
+     {qualquer coisa}
+     end; {FIM}
+
+
+{Exemplo utilizando operadores Lógicos: AND}
+
+   var Z : integer;
+   var C : integer;
+   Z:=1;
+   C:=2;
+     if Z > C AND Z <> 0 then {Condição - SE Z for maior que C E C diferente de 0 - Repare no And}
+     begin
+     {qualquer coisa}     
+     end; {FIM}
+
+
+{Exemplo utilizando operadores Lógicos: OR}
+
+   var Q : integer;
+   var W : integer;
+   Q:=1;
+   W:=2;   
+     if Q > W OR W <> 0 then {Condição - SE Q for maior que W OU W diferente de 0 (zero)- Repare no Or}
+     begin
+     {qualquer coisa}      
+     end; {FIM}
+
+{------------------------------------------------------------------------------------------------------}
+{--------------------------------------- COM ELSE -----------------------------------------------------}
+{------------------------------------------------------------------------------------------------------}
+
+{Exemplo com apenas uma instrução:}
+
+   var R : integer;
+   var T : integer;
+   R:=1;
+   T:=2;   
+     if R > T then{Condição - SE R for maior que T}
+     begin
+     {qualquer coisa}      
+     end
+     else
+     begin
+     {qualquer coisa}	
+     end;
+
+
+{Exemplo com mais de uma instrução:}
+
+   var D : integer;
+   var F : integer;
+   D:=1;
+   F:=2;
+     if D > F then{Condição - SE D for maior que F}
+     begin
+     {qualquer coisa}     	
+     end
+     else 
+     begin
+     {qualquer coisa}        
+     end;
+
+{------------------------------------------------------------------------------------------------------}
+{--------------------------------------- ANINHADA -----------------------------------------------------}
+{------------------------------------------------------------------------------------------------------}
+
+{Exemplos de IF's aninhados:}
+   
+   var G : integer;
+   var H : integer;
+   var J : integer;
+   var K : integer;
+   G:=1;
+   H:=2;
+   J:=3;
+   K:=4;
+     if G > H then { Entrará no Próximo If apenas se a variável G for maior que a variavel H }
+      if J > K then
+         begin
+         {qualquer coisa}
+         end    
+         else
+         begin
+         {qualquer coisa}	
+         end;
+     else
+     begin
+     {qualquer coisa}	
+     end;
+   
+
+{Exemplo de IF's aninhados:}
+
+   var U: integer;
+   var I : integer;
+   var O : integer;
+   var P : integer;
+   U:=1;
+   I:=2;
+   O:=3;
+   P:=4;
+   if U > I then
+     if O > P then
+       begin
+       {qualquer coisa}         
+       end
+       else 
+    	 begin
+       {qualquer coisa}	   
+       end;
+   else
+	 begin
+   {qualquer coisa}	  
+	 end;

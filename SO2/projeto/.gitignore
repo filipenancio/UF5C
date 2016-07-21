@@ -1,0 +1,16 @@
+*.o
+
+bin/
+lib/
+img/
+
+*.conf
+
+.gitignore~
+app/tstp_test
+src/architecture/ia32/ia32_crt0.s
+src/boot/pc_boot
+src/boot/pc_boot.s
+src/setup/pc_setup
+tools/eposmkbi/eposmkbi
+
