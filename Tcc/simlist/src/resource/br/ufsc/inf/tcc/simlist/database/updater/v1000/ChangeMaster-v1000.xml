@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog 
+    					http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd
+       					http://www.liquibase.org/xml/ns/dbchangelog-ext 
+       					http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+    
+    <changeSet id="Create database simList" author="filipenancio" failOnError="true">
+    	<createTable tableName="TB_CONFIG_SISTEMA" remarks="Tabela de configuração do sistema.">
+    		<column name="DS_CONFIG" type="VARCHAR(255)" remarks="Descrição da configuração."/>
+    		<column name="VL_CONFIG" type="VARCHAR(255)" remarks="Valor dado a configração."/>
+    	</createTable>
+    	<insert tableName="TB_CONFIG_SISTEMA" >
+    		<column name="DS_CONFIG" value="VERSAOBASEDADOS"/>
+    		<column name="VL_CONFIG" value="1.0.00"/>
+    	</insert>
+    	
+    	<createTable tableName="TB_LISTA" remarks="Tabela referente as listas.">
+    		<column name="CO_ID_LISTA" incrementBy="1" type="IDENTITY" remarks="Código identificador da lista.">
+    			<constraints primaryKey="true" primaryKeyName="PK_LISTA"/>
+    		</column>
+    		<column name="DS_TITULO" type="VARCHAR(1000)" remarks="Descrição representativa contendo o titulo da lista."/>
+    		<column name="DS_PARAGRAFO" type="VARCHAR(4000)" remarks="Descrição representativa contendo o paragrafo introdutorio ou subsequente á lista."/>
+    		<column name="DS_TITULO_WEBPAGE" type="VARCHAR(1000)" remarks="Descrição representativa contendo o titulo da webpage."/>
+    		<column name="ST_ANALISE" type="BOOLEAN" defaultValueBoolean="false" remarks="Situação da análise. Se 1 - Análise já efetuada, 0 - Análise pendente."/>
+    	</createTable>
+    	
+    	<createTable tableName="TB_LINHA" remarks="Tabela referente as linhas de uma lista.">
+    		<column name="CO_ID_LINHA" incrementBy="1" type="IDENTITY" remarks="Código identificador da linha.">
+    			<constraints primaryKey="true" primaryKeyName="PK_LINHA"/>
+    		</column>
+    		<column name="CO_LISTA" type="LONG" remarks="Codigo referente a lista qual a linha pertence."/>
+    		<column name="DS_LINHA" type="VARCHAR(4000)" remarks="Descrição representativa do conteúdo da linha."/>
+    	</createTable>
+    	
+    	<createTable tableName="TB_TOKEN" remarks="Tabela referente aos tokens retirados das listas.">
+    		<column name="CO_ID_TOKEN" incrementBy="1" type="IDENTITY" remarks="Código identificador do token.">
+    			<constraints primaryKey="true" primaryKeyName="PK_TOKEN"/>
+    		</column>
+    		<column name="CO_TOKEN_PAI" type="LONG" remarks="Codigo do token pai, utilizado para indicar quando token é repetido."/>
+    		<column name="CO_LISTA" type="LONG" remarks="Codigo referente a lista qual o token pertence."/>
+    		<column name="CO_LINHA" type="LONG" remarks="Codigo referente a linha qual o token pertence."/>
+    		<column name="DS_TOKEN" type="VARCHAR(1000)" remarks="Descrição representativa do conteúdo da linha."/>
+    	</createTable>
+    	
+    	<createTable tableName="TB_TECNICA_SIMILARIDADE" remarks="Tabela referente as tecnicas usadas para indice de similaridade.">
+    		<column name="CO_ID_TECNICA_SIMILARIDADE" incrementBy="1" type="IDENTITY" remarks="Código identificador da tecnica de similaridade.">
+    			<constraints primaryKey="true" primaryKeyName="PK_TECNICASIMILARIDADE"/>
+    		</column>
+    		<column name="DS_TECNICA_SIMILARIDADE" type="VARCHAR(255)" remarks="Descrição representativa da tecnica de similaridade."/>
+    		<column name="NO_IDENTIFICADOR" type="VARCHAR(255)" remarks="Nome identificador da tecnica de similaridade."/>
+    	</createTable>
+    	
+    	<insert tableName="TB_TECNICA_SIMILARIDADE" >
+    		<column name="DS_TECNICA_SIMILARIDADE" value="Cosine Similarity"/>
+    		<column name="NO_IDENTIFICADOR" value="COSINE_SIMILARITY"/>
+    	</insert>
+    	<insert tableName="TB_TECNICA_SIMILARIDADE" >
+    		<column name="DS_TECNICA_SIMILARIDADE" value="Levenshtein Similarity"/>
+    		<column name="NO_IDENTIFICADOR" value="LEVENSHTEIN_SIMILARITY"/>
+    	</insert>
+    	<insert tableName="TB_TECNICA_SIMILARIDADE" >
+    		<column name="DS_TECNICA_SIMILARIDADE" value="Jaro Similarity"/>
+    		<column name="NO_IDENTIFICADOR" value="JARO_SIMILARITY"/>
+    	</insert>
+    	<insert tableName="TB_TECNICA_SIMILARIDADE" >
+    		<column name="DS_TECNICA_SIMILARIDADE" value="Hamming Similarity"/>
+    		<column name="NO_IDENTIFICADOR" value="HAMMING_SIMILARITY"/>
+    	</insert>
+    	<insert tableName="TB_TECNICA_SIMILARIDADE" >
+    		<column name="DS_TECNICA_SIMILARIDADE" value="Jaccard Similarity"/>
+    		<column name="NO_IDENTIFICADOR" value="JACCARD_SIMILARITY"/>
+    	</insert>
+    	
+    	<createTable tableName="TB_SIMILARIDADE" remarks="Tabela referente a similaridade entre tokens.">
+    		<column name="CO_ID_SIMILARIDADE" incrementBy="1" type="IDENTITY" remarks="Código identificador da similaridade.">
+    			<constraints primaryKey="true" primaryKeyName="PK_SIMILARIDADE"/>
+    		</column>
+    		<column name="CO_TECNICA_SIMILARIDADE" type="LONG" remarks="Codigo da tecnica de similaridade utilizada."/>
+    		<column name="CO_TOKEN_REF" type="LONG" remarks="Codigo do token de referencia."/>
+    		<column name="CO_TOKEN" type="LONG" remarks="Codigo do token utilizado para comparação."/>
+    		<column name="VL_SIMILARIDADE" type="INTEGER" remarks="Valor de similaridade normalizado (x1000) referente a tecnica de similaridade."/>
+    	</createTable>
+    	
+    </changeSet>
+    	
+</databaseChangeLog>

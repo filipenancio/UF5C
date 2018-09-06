@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document>
+   <link>http://motosnovas.com.br/carros-mais-roubados/</link>
+   <list>
+      <title>Carros Populares mais Roubados no Brasil</title>
+      <lines>
+       	<line> <elements> <element>1º - Palio - Fiat</element> </elements> </line>
+        <line> <elements> <element>2º - Gol - Volkswagen</element> </elements> </line>
+        <line> <elements> <element>3º - Uno - Fiat</element> </elements> </line>
+        <line> <elements> <element>4º - Fox - Volkswagen</element> </elements> </line>
+        <line> <elements> <element>5º - Voyage - Volkswagen</element> </elements> </line>
+        <line> <elements> <element>6º - Punto - Fiat (lembrando que não se enquadra em popular)</element> </elements> </line>
+        <line> <elements> <element>7º - Celta - Chevrolet</element> </elements> </line>
+   	 </lines>
+   </list>
+   <titlePage>Saiba quais são os carros mais roubados no Basil - 2015</titlePage>
+   <text>
+      <paragraph>A categoria dos carros populares é a categoria aonde se encontra o maior número de furtos, além de que é onde se tem o maior número de receptadores, consequentemente mais roubos. Além de serem mais fáceis, possuírem menos sistemas de alarmes e anti-furtos.</paragraph>
+   </text>
+</document>

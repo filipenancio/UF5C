@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document>
+   <link>https://www.carrodegaragem.com/carros-mais-vendidos-2012/</link>
+   <list>
+      <title>Carro popular:</title>
+      <lines>
+       	<line> <elements> <element>1. Gol (Volkswagen)</element> </elements> </line>
+        <line> <elements> <element>2. Uno (Fiat)</element> </elements> </line>
+        <line> <elements> <element>3. Palio (Fiat)</element> </elements> </line>
+        <line> <elements> <element>4. Celta (Chevrolet)</element> </elements> </line>
+        <line> <elements> <element>5. Ka (Ford)</element> </elements> </line>
+   	 </lines>
+   </list>
+   <titlePage>Quais os carros mais vendidos em 2012? - Carro de Garagem</titlePage>
+   <text>
+      <paragraph>O gol continua mantendo a liderança do seu segmento graças ao design (mais moderno e elegante do que os seus concorrentes), o ótimo motor VW aliado ao bom câmbio.</paragraph>
+   </text>
+</document>
