@@ -1,0 +1,21 @@
+Cápitulo 2 - Integração de dados
+
+    Gerencimaneto de dados heterogêneos:
+        - estudo motivado pela necessidade de compartilhar informação entre diferentes plataformas. [ELM 99]
+        - heterogêneos por hardware ou software, assim como na definição dos dados. [WIE 93]
+        - Multidatabase (MDB) vs. Bancos de dados federados (BDF).
+        - BDF, arquitetura com esquemas locais em cada banco de dados participante da "federação", transpostos a um esquema componente, cujo é um modelo canônico adotado.
+        - MDB, não apresenta esquemas globais, usuário acessa diretamente os esquemas locais e necessita tratar a heterogeneidade dos dados.
+
+    Integração de Esquemas:
+        - A criação de esquemas globais ou externos, exige a integração de esquemas. Para integrar é necessário resolver as diversidades estruturais e semântica[BAT 86, ELM 99].
+        - Como a semântica não está sempre formalmente expressa, ou documentada, o processo tornasse complexo. Sendo assim as ferramentas de integração acabam sendo naturalmente semiautomáticas, necessitando de intervenção para tomadas de decisão. [RAH 2001].
+        - Pré-Integração >> Comparação >> Unificação >> Reestruturação.
+        - Taxonomia de processos de integração de esquemas.
+        - Ex.: Linguística - tratamento através de informações auxiliares (Thesauri), baseada por esquemas ou por instâncias (conteúdo), tratamento de sinonímia e homonímia e demais conflitos estruturais.
+        - integração top-down ou bottom-up.
+    
+    Integração de Dados Semi-Estruturados:
+        - Popularização da Web [BUS 99].
+        - Dados na Web, diferentes representações da mesma instância, apresentadas como um misto de texto e estrutura [ABI 97, FLO 97, BUN 97, ABI 2000].
+        
