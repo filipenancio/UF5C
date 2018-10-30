@@ -9,13 +9,15 @@ Cápitulo 2 - Integração de dados
 
     Integração de Esquemas:
         - A criação de esquemas globais ou externos, exige a integração de esquemas. Para integrar é necessário resolver as diversidades estruturais e semântica[BAT 86, ELM 99].
-        - Como a semântica não está sempre formalmente expressa, ou documentada, o processo tornasse complexo. Sendo assim as ferramentas de integração acabam sendo naturalmente semiautomáticas, necessitando de intervenção para tomadas de decisão. [RAH 2001].
+        - Como a semântica não está sempre formalmente expressa, ou documentada, o processamento dos dados tornasse complexo. Por isso, as ferramentas de integração acabam sendo naturalmente semiautomáticas, necessitando de intervenção para tomadas de decisão e resolução de conflitos [RAH 2001].
         - Pré-Integração >> Comparação >> Unificação >> Reestruturação.
         - Taxonomia de processos de integração de esquemas.
         - Ex.: Linguística - tratamento através de informações auxiliares (Thesauri), baseada por esquemas ou por instâncias (conteúdo), tratamento de sinonímia e homonímia e demais conflitos estruturais.
         - integração top-down ou bottom-up.
     
     Integração de Dados Semi-Estruturados:
-        - Popularização da Web [BUS 99].
+        - Popularização da Web e aumento do número de fontes de dados [BUS 99].
         - Dados na Web, diferentes representações da mesma instância, apresentadas como um misto de texto e estrutura [ABI 97, FLO 97, BUN 97, ABI 2000].
+        - Sistemas de informação federados (SIFs) [BUS 99], apresentam arquitetura baseada em mediadores e wrappers, para gerenciamento de dados heterogêneos.
+
         

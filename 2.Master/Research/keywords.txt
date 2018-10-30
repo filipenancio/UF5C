@@ -1,0 +1,13 @@
+Dicas prof(a) vânia:
+* representativa
+* padrão
+* integração
+
+Joint
+Extract
+trajectory
+route
+Behavior 
+Estimation
+Matching
+Simplification
