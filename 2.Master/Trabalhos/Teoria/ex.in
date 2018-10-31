@@ -1,0 +1,21 @@
+S
+SAB
+ab
+S -> AB
+A -> a
+B -> b
+# -> #
+ab
+a
+#
+S
+SAB
+ab
+S -> AB
+A -> a
+B -> b
+S -> a
+# -> #
+ab
+a
+#
